@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}ICC Cricket Rankings{% endblock %} | Official Rankings Database</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏏</text></svg>">
+</head>
+<body>
+
+  <!-- Official ICC Navigation Bar -->
+  <header class="icc-header">
+    <div class="nav-container">
+      <a href="{{ url_for('index') }}" class="brand-logo">
+        <span class="brand-badge">ICC</span>
+        <span>Cricket Rankings</span>
+      </a>
+
+      <nav>
+        <ul class="nav-links">
+          <li class="nav-item"><a href="{{ url_for('index') }}" class="{{ 'active' if request.endpoint == 'index' else '' }}">Home</a></li>
+          <li class="nav-item"><a href="{{ url_for('rankings') }}" class="{{ 'active' if request.endpoint == 'rankings' else '' }}">Rankings</a></li>
+          <li class="nav-item"><a href="{{ url_for('teams') }}" class="{{ 'active' if request.endpoint == 'teams' else '' }}">Teams</a></li>
+          <li class="nav-item"><a href="{{ url_for('players') }}" class="{{ 'active' if request.endpoint == 'players' else '' }}">Players</a></li>
+          <li class="nav-item"><a href="{{ url_for('matches') }}" class="{{ 'active' if request.endpoint == 'matches' else '' }}">Matches</a></li>
+          <li class="nav-item"><a href="{{ url_for('series') }}" class="{{ 'active' if request.endpoint == 'series' else '' }}">Series</a></li>
+          <li class="nav-item"><a href="{{ url_for('venues') }}" class="{{ 'active' if request.endpoint == 'venues' else '' }}">Venues</a></li>
+          <li class="nav-item"><a href="{{ url_for('reports') }}" class="{{ 'active' if request.endpoint == 'reports' else '' }}">Reports</a></li>
+          <li class="nav-item admin-btn"><a href="{{ url_for('admin') }}" class="{{ 'active' if request.endpoint == 'admin' else '' }}">⚙ Admin</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content Wrapper -->
+  <main class="main-wrapper">
+    <!-- Flash Messages (Operations & Errors) -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="alert-container">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+              <span>{{ message }}</span>
+              <button type="button" class="alert-close">&times;</button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="icc-footer">
+    <div class="footer-container">
+      <div>
+        <h4 style="color:#fff; margin-bottom: 0.5rem;">ICC Cricket Rankings Database</h4>
+        <p>Comprehensive relational implementation of ICC team and player ratings.</p>
+        <p style="font-size: 0.8rem; margin-top: 0.25rem;">Relational model strictly following Phase 3 &amp; Phase 1 requirements with raw SQL.</p>
+      </div>
+      <div>
+        <h4 style="color:#fff; margin-bottom: 0.5rem;">Quick Links</h4>
+        <p><a href="{{ url_for('rankings') }}" style="color:#94a3b8; text-decoration:none;">Rankings Hub</a> | <a href="{{ url_for('matches') }}" style="color:#94a3b8; text-decoration:none;">Matches</a> | <a href="{{ url_for('admin') }}" style="color:#94a3b8; text-decoration:none;">Admin Portal</a></p>
+      </div>
+    </div>
+    <div class="footer-copy">
+      &copy; 2026 ICC Cricket Rankings System &middot; Phase 4 Database Project
+    </div>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

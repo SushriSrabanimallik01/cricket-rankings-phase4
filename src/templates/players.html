@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Search &amp; Browse Players{% endblock %}
+
+{% block content %}
+<div class="content-box">
+  <div class="section-header">
+    <div>
+      <h1 class="section-title">International Cricket Players</h1>
+      <p style="font-size:0.875rem; color:#64748b;">Search by name (Q1) or browse squad lists by national team (S3)</p>
+    </div>
+    <a href="{{ url_for('admin', action='player_add') }}" class="btn btn-primary btn-sm">+ Register New Player</a>
+  </div>
+
+  <!-- Search & Filter Form -->
+  <form method="get" action="{{ url_for('players') }}" class="filter-bar" style="align-items:flex-end;">
+    <!-- Q1 Name Search -->
+    <div style="flex:1; min-width:240px;">
+      <label for="search-q" class="form-label" style="font-size:0.8rem; margin-bottom:0.25rem;">Search Name (Q1 - Partial Match e.g. "SHA"):</label>
+      <input type="text" id="search-q" name="q" value="{{ search_query }}" placeholder="Type player name..." class="form-control">
+    </div>
+
+    <!-- S3 Team Selector -->
+    <div style="min-width:200px;">
+      <label for="select-team" class="form-label" style="font-size:0.8rem; margin-bottom:0.25rem;">Filter by Team Squad (S3):</label>
+      <select id="select-team" name="team" class="form-select">
+        <option value="">-- All National Teams --</option>
+        {% for t in all_teams %}
+        <option value="{{ t.ICC_Code }}" {{ 'selected' if selected_team == t.ICC_Code else '' }}>{{ t.TeamName }} ({{ t.ICC_Code }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <button type="submit" class="btn btn-primary">Search</button>
+      {% if search_query or selected_team %}
+        <a href="{{ url_for('players') }}" class="btn btn-secondary">Clear</a>
+      {% endif %}
+    </div>
+  </form>
+
+  <!-- Quick Search Pills -->
+  <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1.5rem; flex-wrap:wrap;">
+    <span style="font-size:0.775rem; color:#64748b; font-weight:600;">Popular searches:</span>
+    <a href="{{ url_for('players', q='SHA') }}" class="badge-fmt" style="background:#e2e8f0; color:#334155; text-decoration:none;">"SHA" (Q1 test)</a>
+    <a href="{{ url_for('players', q='Kohli') }}" class="badge-fmt" style="background:#e2e8f0; color:#334155; text-decoration:none;">Kohli</a>
+    <a href="{{ url_for('players', q='Bumrah') }}" class="badge-fmt" style="background:#e2e8f0; color:#334155; text-decoration:none;">Bumrah</a>
+    <a href="{{ url_for('players', q='Root') }}" class="badge-fmt" style="background:#e2e8f0; color:#334155; text-decoration:none;">Root</a>
+    <a href="{{ url_for('players', q='Mandhana') }}" class="badge-fmt" style="background:#e2e8f0; color:#334155; text-decoration:none;">Mandhana</a>
+  </div>
+
+  <!-- Players Table -->
+  <div class="table-responsive">
+    <table class="icc-table">
+      <thead>
+        <tr>
+          <th style="width:70px;">ID</th>
+          <th>Player Name</th>
+          <th>Current Team (REPRESENTS)</th>
+          <th>Gender</th>
+          {% if players and players[0].DateOfBirth is defined %}
+          <th>Date of Birth</th>
+          <th style="text-align:right;">Age</th>
+          <th>Retired Formats</th>
+          {% endif %}
+          <th style="text-align:center;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in players %}
+        <tr>
+          <td style="color:#64748b; font-size:0.85rem;">#{{ p.PlayerID }}</td>
+          <td>
+            <a href="{{ url_for('player_details', player_id=p.PlayerID) }}" style="font-weight:700; color:#071c36; text-decoration:none; font-size:1rem;">
+              {{ p.FirstName }} {{ p.LastName }}
+            </a>
+          </td>
+          <td>
+            <div style="display:flex; align-items:center; gap:0.4rem;">
+              <span style="font-weight:600;">{{ p.TeamName if p.TeamName is defined else p.ICC_Code }}</span>
+              <span style="font-size:0.75rem; color:#64748b; background:#f1f5f9; padding:0.1rem 0.35rem; border-radius:3px;">{{ p.ICC_Code }}</span>
+            </div>
+          </td>
+          <td>
+            <span style="font-size:0.85rem; color:#475569;">{{ p.Gender }}</span>
+          </td>
+          {% if p.DateOfBirth is defined %}
+          <td style="color:#475569; font-size:0.875rem;">{{ p.DateOfBirth }}</td>
+          <td style="text-align:right; font-weight:600; color:#071c36;">{{ p.Age }} yrs</td>
+          <td>
+            <div style="display:flex; gap:0.25rem;">
+              {% if p.RetiredFormat1 %}<span class="badge-fmt badge-{{ p.RetiredFormat1|lower }}">Ret: {{ p.RetiredFormat1 }}</span>{% endif %}
+              {% if p.RetiredFormat2 %}<span class="badge-fmt badge-{{ p.RetiredFormat2|lower }}">Ret: {{ p.RetiredFormat2 }}</span>{% endif %}
+              {% if p.RetiredFormat3 %}<span class="badge-fmt badge-{{ p.RetiredFormat3|lower }}">Ret: {{ p.RetiredFormat3 }}</span>{% endif %}
+              {% if not p.RetiredFormat1 and not p.RetiredFormat2 and not p.RetiredFormat3 %}
+                <span style="color:#94a3b8; font-size:0.8rem;">Active</span>
+              {% endif %}
+            </div>
+          </td>
+          {% endif %}
+          <td style="text-align:center;">
+            <a href="{{ url_for('player_details', player_id=p.PlayerID) }}" class="btn btn-outline btn-sm">Full Profile &rarr;</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" style="text-align:center; padding:2rem; color:#64748b;">
+            No players found matching the search criteria.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,608 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Management Console{% endblock %}
+
+{% block content %}
+<div class="content-box">
+  <div class="section-header">
+    <div>
+      <h1 class="section-title">⚙️ Rankings Officer &amp; Admin Console</h1>
+      <p style="font-size:0.875rem; color:#64748b;">Execute validated write operations (Create, Update, Delete) with database integrity checks</p>
+    </div>
+  </div>
+
+  <!-- Action Sub-Tabs -->
+  <div class="tab-nav">
+    <a href="{{ url_for('admin', action='match_add') }}" class="tab-link {{ 'active' if action == 'match_add' else '' }}">Add Match (I1)</a>
+    <a href="{{ url_for('admin', action='player_add') }}" class="tab-link {{ 'active' if action == 'player_add' else '' }}">Register Player (I3)</a>
+    <a href="{{ url_for('admin', action='load_snapshot') }}" class="tab-link {{ 'active' if action == 'load_snapshot' else '' }}">Load Snapshot (I2)</a>
+    <a href="{{ url_for('admin', action='result') }}" class="tab-link {{ 'active' if action == 'result' else '' }}">Record Result (U1)</a>
+    <a href="{{ url_for('admin', action='correct_result') }}" class="tab-link {{ 'active' if action == 'correct_result' else '' }}">Correct Result (U2)</a>
+    <a href="{{ url_for('admin', action='retire') }}" class="tab-link {{ 'active' if action == 'retire' else '' }}">Retirement (U3)</a>
+    <a href="{{ url_for('admin', action='team_formats') }}" class="tab-link {{ 'active' if action == 'team_formats' else '' }}">Team Formats (U4)</a>
+    <a href="{{ url_for('admin', action='player_move') }}" class="tab-link {{ 'active' if action == 'player_move' else '' }}">Transfer Player (U5)</a>
+    <a href="{{ url_for('admin', action='match_delete') }}" class="tab-link {{ 'active' if action == 'match_delete' else '' }}">Delete Match (D1)</a>
+    <a href="{{ url_for('admin', action='player_dup') }}" class="tab-link {{ 'active' if action == 'player_dup' else '' }}">Deduplicate Player (D2)</a>
+  </div>
+
+  <!-- 1. I1: ADD A MATCH -->
+  {% if action == 'match_add' %}
+  <div style="max-width:750px;">
+    <h3 style="font-size:1.25rem; color:#071c36; margin-bottom:0.5rem;">[I1] Schedule / Add a Match</h3>
+    <p style="font-size:0.85rem; color:#64748b; margin-bottom:1.5rem;">
+      Inserts CricketMatch, the appropriate subclass (TestMatch or LimitedOversMatch), and exactly two Contests rows in a single atomic transaction.
+    </p>
+
+    <form id="form-add-match" method="post" action="{{ url_for('admin_add_match') }}">
+      <div class="form-group">
+        <label class="form-label">Series / Tournament:</label>
+        <select name="series_id" class="form-select" required>
+          <option value="">-- Choose Series --</option>
+          {% for s in all_series %}
+          <option value="{{ s.SeriesID }}">{{ s.SeriesName }} ({{ s.Format }} &bull; {{ s.Gender }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Venue Ground:</label>
+        <select name="venue_id" class="form-select" required>
+          <option value="">-- Choose Venue --</option>
+          {% for v in all_venues %}
+          <option value="{{ v.VenueID }}">{{ v.VenueName }}, {{ v.City }} ({{ v.Country }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div class="form-group">
+          <label class="form-label">Team 1:</label>
+          <select id="match-team1" name="team1" class="form-select" required>
+            <option value="">-- Team 1 --</option>
+            {% for t in all_teams %}
+            <option value="{{ t.ICC_Code }}">{{ t.TeamName }} ({{ t.ICC_Code }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Team 2:</label>
+          <select id="match-team2" name="team2" class="form-select" required>
+            <option value="">-- Team 2 --</option>
+            {% for t in all_teams %}
+            <option value="{{ t.ICC_Code }}">{{ t.TeamName }} ({{ t.ICC_Code }})</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div class="form-group">
+          <label class="form-label">Start Date:</label>
+          <input type="date" id="match-start-date" name="start_date" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">End Date:</label>
+          <input type="date" id="match-end-date" name="end_date" class="form-control" required>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div class="form-group">
+          <label class="form-label">Scheduled Days (Test Matches Only):</label>
+          <select name="scheduled_days" class="form-select">
+            <option value="5">5 Days (Standard Test)</option>
+            <option value="4">4 Days</option>
+          </select>
+        </div>
+        <div class="form-group" style="display:flex; align-items:center; padding-top:1.75rem;">
+          <label style="display:flex; align-items:center; gap:0.5rem; font-weight:600; font-size:0.9rem; cursor:pointer;">
+            <input type="checkbox" name="dls_applied" value="1">
+            <span>DLS Method Applied (Limited Overs)</span>
+          </label>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="margin-top:0.5rem;">Add Match (I1)</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- 2. I3: REGISTER PLAYER -->
+  {% if action == 'player_add' %}
+  <div style="max-width:650px;">
+    <h3 style="font-size:1.25rem; color:#071c36; margin-bottom:0.5rem;">[I3] Register a New Player</h3>
+    <p style="font-size:0.85rem; color:#64748b; margin-bottom:1.5rem;">
+      Registers a player and sets up the REPRESENTS relationship with their national team. Date of birth must be in the past (C4).
+    </p>
+
+    <form method="post" action="{{ url_for('admin_register_player') }}">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div class="form-group">
+          <label class="form-label">First Name:</label>
+          <input type="text" name="first_name" class="form-control" placeholder="e.g. Yashasvi" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Last Name:</label>
+          <input type="text" name="last_name" class="form-control" placeholder="e.g. Jaiswal" required>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div class="form-group">
+          <label class="form-label">Date of Birth:</label>
+          <input type="date" name="date_of_birth" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Gender:</label>
+          <select name="gender" class="form-select" required>
+            <option value="Men">Men</option>
+            <option value="Women">Women</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">National Team (REPRESENTS):</label>
+        <select name="team_code" class="form-select" required>
+          <option value="">-- Choose Team --</option>
+          {% for t in all_teams %}
+          <option value="{{ t.ICC_Code }}">{{ t.TeamName }} ({{ t.ICC_Code }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="margin-top:0.5rem;">Register Player (I3)</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- 3. I2: LOAD WEEKLY PLAYER SNAPSHOT -->
+  {% if action == 'load_snapshot' %}
+  <div style="max-width:850px;">
+    <h3 style="font-size:1.25rem; color:#071c36; margin-bottom:0.5rem;">[I2] Load Weekly Player Snapshot</h3>
+    <p style="font-size:0.85rem; color:#64748b; margin-bottom:1.5rem;">
+      Batch inserts weekly published ratings. Triggers check Wednesday (men) / Tuesday (women) (C11), no women's Tests (C12), qualifying appearance window (C13), and the 100-player limit (C14).
+    </p>
+
+    <form method="post" action="{{ url_for('admin_load_player_snapshot') }}">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
+        <div class="form-group">
+          <label class="form-label">Format:</label>
+          <select name="format" class="form-select" required>
+            {% for f in FORMATS %}
+            <option value="{{ f }}">{{ f }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Snapshot Date (Wed for Men / Tue for Women):</label>
+          <input type="date" name="snapshot_date" class="form-control" required>
+        </div>
+      </div>
+
+      <h4 style="font-size:1rem; color:#334155; margin-bottom:0.5rem;">Player Rating Rows</h4>
+      <div class="table-responsive" style="margin-bottom:1rem;">
+        <table class="icc-table">
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th style="width:160px;">Batting Points (0-1000)</th>
+              <th style="width:160px;">Bowling Points (0-1000)</th>
+            </tr>
+          </thead>
+          <tbody id="snapshot-rows-body">
+            <tr>
+              <td>
+                <select name="player_id[]" class="form-select" required>
+                  <option value="">-- Choose Player --</option>
+                  {% for p in all_players %}
+                  <option value="{{ p.PlayerID }}">{{ p.FirstName }} {{ p.LastName }} ({{ p.ICC_Code }} &bull; {{ p.Gender }})</option>
+                  {% endfor %}
+                </select>
+              </td>
+              <td><input type="number" min="0" max="1000" name="batting[]" class="form-control" placeholder="Optional"></td>
+              <td><input type="number" min="0" max="1000" name="bowling[]" class="form-control" placeholder="Optional"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <button type="button" id="btn-add-snapshot-row" class="btn btn-outline btn-sm">+ Add Another Row</button>
+        <button type="submit" class="btn btn-primary">Submit Snapshot (I2)</button>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- 4. U1: RECORD MATCH RESULT -->
+  {% if action == 'result' %}
+  <div style="max-width:750px;">
+    <h3 style="font-size:1.25rem; color:#071c36; margin-bottom:0.5rem;">[U1] Record Match Result &amp; Update Ratings</h3>
+    <p style="font-size:0.85rem; color:#64748b; margin-bottom:1.5rem;">
+      Sets complementary outcomes and margin (C7). Optionally publishes an updated TeamRating row for each team (Matches +1 and Points +ICC calculation).
+    </p>
+
+    <!-- Match Selector if not pre-selected -->
+    {% if not target_match %}
+    <form method="get" action="{{ url_for('admin') }}" style="margin-bottom:1.5rem; display:flex; gap:0.75rem; align-items:flex-end;">
+      <input type="hidden" name="action" value="result">
+      <div style="flex:1;">
+        <label class="form-label">Select Match:</label>
+        <select name="match_id" class="form-select">
+          <option value="">-- Choose Match --</option>
+          {% for m in all_matches %}
+          <option value="{{ m.MatchID }}">Match #{{ m.MatchID }}: {{ m.Teams }} ({{ m.Format }} &bull; {{ m.StartDate }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary">Load Match</button>
+    </form>
+    {% else %}
+    <div style="background:#f1f5f9; padding:1rem; border-radius:8px; margin-bottom:1.5rem;">
+      <strong>Selected:</strong> Match #{{ target_match.MatchID }} ({{ target_match.SeriesName }}) &bull; {{ target_match.StartDate }}
+    </div>
+
+    <form method="post" action="{{ url_for('admin_record_result', match_id=target_match.MatchID) }}">
+      <div class="form-group">
+        <label class="form-label">Match Outcome (C7):</label>
+        <select id="select-result" name="result" class="form-select" required>
+          <option value="Win">Win / Loss</option>
+          <option value="Tie">Tie</option>
+          {% if target_match.Format == 'Test' %}
+          <option value="Draw">Draw (Test Only)</option>
+          {% endif %}
+          <option value="NoResult">No Result</option>
+        </select>
+      </div>
+
+      <div id="win-specific-fields">
+        <div class="form-group">
+          <label class="form-label">Winning Team:</label>
+          <select name="winner_code" class="form-select">
+            <option value="">-- Choose Winner --</option>
+            {% for t in all_teams %}
+            <option value="{{ t.ICC_Code }}">{{ t.TeamName }} ({{ t.ICC_Code }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+          <div class="form-group">
+            <label class="form-label">Margin Value (Positive Integer):</label>
+            <input type="number" min="1" name="margin_value" class="form-control" placeholder="e.g. 6">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Margin Type:</label>
+            <select name="margin_type" class="form-select">
+              <option value="">-- None --</option>
+              {% for mt in MARGIN_TYPES %}
+              <option value="{{ mt }}">{{ mt }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Optional Team Rating Snapshot Update -->
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1rem; margin-top:1.5rem;">
+        <h4 style="font-size:0.95rem; color:#071c36; margin-bottom:0.5rem;">Optional: Publish New Team Rating Snapshot</h4>
+        <p style="font-size:0.8rem; color:#64748b; margin-bottom:1rem;">If provided, matches count will increase by 1 and rating will be recomputed.</p>
+
+        <div class="form-group">
+          <label class="form-label">Effective Date of Snapshot:</label>
+          <input type="date" name="effective_date" value="{{ target_match.EndDate }}" class="form-control">
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+          <div>
+            <label class="form-label">Team 1 Code &amp; Points Added:</label>
+            <div style="display:flex; gap:0.5rem;">
+              <input type="text" name="team1_code" placeholder="Code (e.g. IND)" class="form-control" style="width:100px;">
+              <input type="number" name="team1_points" placeholder="+ Points (e.g. 120)" class="form-control">
+            </div>
+          </div>
+          <div>
+            <label class="form-label">Team 2 Code &amp; Points Added:</label>
+            <div style="display:flex; gap:0.5rem;">
+              <input type="text" name="team2_code" placeholder="Code (e.g. SL)" class="form-control" style="width:100px;">
+              <input type="number" name="team2_points" placeholder="+ Points (e.g. 40)" class="form-control">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="margin-top:1rem;">Save Result (U1)</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- 5. U2: CORRECT RESULT AFTER RULING -->
+  {% if action == 'correct_result' %}
+  <div style="max-width:750px;">
+    <h3 style="font-size:1.25rem; color:#071c36; margin-bottom:0.5rem;">[U2] Correct Result After a Ruling</h3>
+    <p style="font-size:0.85rem; color:#64748b; margin-bottom:1.5rem;">
+      Blocked until the officer supplies revised Points for EVERY later snapshot of the two teams in that format. Earlier snapshots stay untouched.
+    </p>
+
+    {% if not target_match %}
+    <form method="get" action="{{ url_for('admin') }}" style="display:flex; gap:0.75rem; align-items:flex-end;">
+      <input type="hidden" name="action" value="correct_result">
+      <div style="flex:1;">
+        <label class="form-label">Select Match to Correct:</label>
+        <select name="match_id" class="form-select">
+          <option value="">-- Choose Match --</option>
+          {% for m in all_matches %}
+          <option value="{{ m.MatchID }}">Match #{{ m.MatchID }}: {{ m.Teams }} ({{ m.StartDate }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary">Check Later Snapshots</button>
+    </form>
+    {% else %}
+    <form method="post" action="{{ url_for('admin_correct_result', match_id=target_match.MatchID) }}">
+      <div class="form-group">
+        <label class="form-label">Corrected Outcome:</label>
+        <select name="result" class="form-select" required>
+          <option value="Win">Win / Loss</option>
+          <option value="Tie">Tie</option>
+          {% if target_match.Format == 'Test' %}<option value="Draw">Draw</option>{% endif %}
+          <option value="NoResult">No Result</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Winner:</label>
+        <select name="winner_code" class="form-select">
+          <option value="">-- Choose Winner (if Win) --</option>
+          {% for t in all_teams %}
+          <option value="{{ t.ICC_Code }}">{{ t.TeamName }} ({{ t.ICC_Code }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div class="form-group">
+          <label class="form-label">Margin Value:</label>
+          <input type="number" min="1" name="margin_value" class="form-control">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Margin Type:</label>
+          <select name="margin_type" class="form-select">
+            <option value="">-- None --</option>
+            {% for mt in MARGIN_TYPES %}
+            <option value="{{ mt }}">{{ mt }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <h4 style="font-size:1rem; color:#b91c1c; margin:1.25rem 0 0.5rem;">
+        Subsequent Snapshots Requiring Revised Points (U2 Rule)
+      </h4>
+      {% if later_snapshots %}
+      <div class="table-responsive" style="margin-bottom:1rem;">
+        <table class="icc-table">
+          <thead>
+            <tr>
+              <th>Team</th>
+              <th>Snapshot Date</th>
+              <th>Current Matches</th>
+              <th>Current Points</th>
+              <th>Revised Points (Required)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in later_snapshots %}
+            <tr>
+              <td><strong>{{ s.TeamName }}</strong> ({{ s.ICC_Code }})</td>
+              <td>{{ s.EffectiveDate }}</td>
+              <td>{{ s.Matches }}</td>
+              <td>{{ s.Points }}</td>
+              <td>
+                <input type="number" name="revised_pts_{{ s.ICC_Code }}_{{ s.EffectiveDate }}" value="{{ s.Points }}" class="form-control" required style="width:130px;">
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p style="color:#15803d; font-size:0.875rem; margin-bottom:1rem;">
+        No subsequent snapshots exist after this match end date. No points revision needed!
+      </p>
+      {% endif %}
+
+      <button type="submit" class="btn btn-primary">Apply Result Correction (U2)</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- 6. U3: RETIREMENT -->
+  {% if action == 'retire' %}
+  <div style="max-width:650px;">
+    <h3 style="font-size:1.25rem; color:#071c36; margin-bottom:0.5rem;">[U3] Record Player Retirement</h3>
+    <p style="font-size:0.85rem; color:#64748b; margin-bottom:1.5rem;">
+      Allowed only if the player has appeared in that format (enforced by database trigger). The player then drops out of current rankings views while earlier snapshots stay as history.
+    </p>
+
+    <form method="post" action="{% if request.args.get('player_id') %}{{ url_for('admin_record_retirement', player_id=request.args.get('player_id')) }}{% else %}#{% endif %}">
+      <div class="form-group">
+        <label class="form-label">Player:</label>
+        <select class="form-select" onchange="this.form.action='/admin/player/' + this.value + '/retire'" required>
+          <option value="">-- Choose Player --</option>
+          {% for p in all_players %}
+          <option value="{{ p.PlayerID }}" {{ 'selected' if request.args.get('player_id') == (p.PlayerID|string) else '' }}>
+            {{ p.FirstName }} {{ p.LastName }} ({{ p.ICC_Code }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Format to Retire From:</label>
+        <select name="format" class="form-select" required>
+          {% for f in FORMATS %}
+          <option value="{{ f }}">{{ f }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Record Retirement (U3)</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- 7. U4: TEAM FORMATS -->
+  {% if action == 'team_formats' %}
+  <div style="max-width:650px;">
+    <h3 style="font-size:1.25rem; color:#071c36; margin-bottom:0.5rem;">[U4] Update Team Eligible Formats</h3>
+    <p style="font-size:0.85rem; color:#64748b; margin-bottom:1.5rem;">
+      Modifies EligibleFormat1-3. Future matches and snapshots in ineligible formats will be refused by constraint C8. Existing rows stay as history.
+    </p>
+
+    <form method="post" action="{{ url_for('admin_set_team_formats') }}">
+      <div class="form-group">
+        <label class="form-label">Team:</label>
+        <select name="team_code" class="form-select" required>
+          <option value="">-- Choose Team --</option>
+          {% for t in all_teams %}
+          <option value="{{ t.ICC_Code }}">{{ t.TeamName }} ({{ t.ICC_Code }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Eligible Formats (Select 1 to 3):</label>
+        <div style="display:flex; gap:1.5rem; margin-top:0.5rem;">
+          {% for f in FORMATS %}
+          <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;">
+            <input type="checkbox" name="formats[]" value="{{ f }}" checked>
+            <span>{{ f }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="margin-top:0.5rem;">Update Formats (U4)</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- 8. U5: TRANSFER PLAYER -->
+  {% if action == 'player_move' %}
+  <div style="max-width:650px;">
+    <h3 style="font-size:1.25rem; color:#071c36; margin-bottom:0.5rem;">[U5] Transfer Player to Another Team</h3>
+    <p style="font-size:0.85rem; color:#64748b; margin-bottom:1.5rem;">
+      Updates the REPRESENTS link. Past PlaysIn rows continue to remember the team the player appeared for in past matches.
+    </p>
+
+    <form method="post" action="{% if request.args.get('player_id') %}{{ url_for('admin_move_player', player_id=request.args.get('player_id')) }}{% else %}#{% endif %}">
+      <div class="form-group">
+        <label class="form-label">Player:</label>
+        <select class="form-select" onchange="this.form.action='/admin/player/' + this.value + '/move'" required>
+          <option value="">-- Choose Player --</option>
+          {% for p in all_players %}
+          <option value="{{ p.PlayerID }}" {{ 'selected' if request.args.get('player_id') == (p.PlayerID|string) else '' }}>
+            {{ p.FirstName }} {{ p.LastName }} (Current: {{ p.ICC_Code }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">New National Team:</label>
+        <select name="new_team_code" class="form-select" required>
+          <option value="">-- Choose Destination Team --</option>
+          {% for t in all_teams %}
+          <option value="{{ t.ICC_Code }}">{{ t.TeamName }} ({{ t.ICC_Code }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Transfer Player (U5)</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- 9. D1: DELETE MATCH -->
+  {% if action == 'match_delete' %}
+  <div style="max-width:650px;">
+    <h3 style="font-size:1.25rem; color:#b91c1c; margin-bottom:0.5rem;">[D1] Delete a Match (Cascade)</h3>
+    <p style="font-size:0.85rem; color:#64748b; margin-bottom:1.5rem;">
+      Deletes a match entered in error. Foreign key constraints automatically CASCADE delete associated Contests, TestMatch/LimitedOversMatch, and PlaysIn rows.
+    </p>
+
+    <form method="post" action="#" onsubmit="this.action='/admin/match/' + this.match_id.value + '/delete'" class="form-confirm-delete" data-confirm="Are you sure you want to permanently delete this match and all associated records?">
+      <div class="form-group">
+        <label class="form-label">Select Match to Delete:</label>
+        <select name="match_id" class="form-select" required>
+          <option value="">-- Choose Match --</option>
+          {% for m in all_matches %}
+          <option value="{{ m.MatchID }}">Match #{{ m.MatchID }}: {{ m.Teams }} ({{ m.StartDate }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-danger">Permanently Delete Match (D1)</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- 10. D2: DEDUPLICATE PLAYER & MOVE APPEARANCES -->
+  {% if action == 'player_dup' %}
+  <div style="max-width:700px;">
+    <h3 style="font-size:1.25rem; color:#071c36; margin-bottom:0.5rem;">[D2] Move Appearances &amp; Delete Duplicate Player</h3>
+    <p style="font-size:0.85rem; color:#64748b; margin-bottom:1.5rem;">
+      Deleting a player deletes their PlayerRating rows (cascade), but is refused if PlaysIn appearances exist. Use this tool to migrate appearances from the duplicate record to the surviving record first!
+    </p>
+
+    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1.25rem; margin-bottom:1.5rem;">
+      <h4 style="font-size:1rem; color:#071c36; margin-bottom:0.75rem;">Step 1: Move Appearances</h4>
+      <form method="post" action="{{ url_for('admin_move_appearances') }}">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+          <div class="form-group">
+            <label class="form-label">Duplicate Player (Source):</label>
+            <select name="from_player_id" class="form-select" required>
+              <option value="">-- Choose Duplicate --</option>
+              {% for p in all_players %}
+              <option value="{{ p.PlayerID }}">{{ p.FirstName }} {{ p.LastName }} (#{{ p.PlayerID }} &bull; {{ p.ICC_Code }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Surviving Player (Destination):</label>
+            <select name="to_player_id" class="form-select" required>
+              <option value="">-- Choose Surviving --</option>
+              {% for p in all_players %}
+              <option value="{{ p.PlayerID }}">{{ p.FirstName }} {{ p.LastName }} (#{{ p.PlayerID }} &bull; {{ p.ICC_Code }})</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">Transfer Appearances</button>
+      </form>
+    </div>
+
+    <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:1.25rem;">
+      <h4 style="font-size:1rem; color:#991b1b; margin-bottom:0.75rem;">Step 2: Delete Duplicate Player Record</h4>
+      <form method="post" action="#" onsubmit="this.action='/admin/player/' + this.player_id.value + '/delete'" class="form-confirm-delete" data-confirm="Delete this duplicate player? (Will fail if appearances remain)">
+        <div class="form-group">
+          <label class="form-label" style="color:#991b1b;">Player to Delete:</label>
+          <select name="player_id" class="form-select" required>
+            <option value="">-- Choose Player to Delete --</option>
+            {% for p in all_players %}
+            <option value="{{ p.PlayerID }}">{{ p.FirstName }} {{ p.LastName }} (#{{ p.PlayerID }} &bull; {{ p.ICC_Code }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="btn btn-danger btn-sm">Delete Duplicate Record (D2)</button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

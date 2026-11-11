@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Match #{{ match.MatchID }} Details - {{ match.SeriesName }}{% endblock %}
+
+{% block content %}
+<!-- Match Summary Header Box -->
+<div class="content-box">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
+    <div>
+      <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem;">
+        <span class="badge-fmt badge-{{ match.Format|lower }}">{{ match.Format }}</span>
+        <span style="font-size:0.8rem; color:#64748b;">{{ match.Gender }}'s &bull; Match ID #{{ match.MatchID }}</span>
+      </div>
+      <h1 style="font-size:1.85rem; font-weight:800; color:#071c36; margin-bottom:0.35rem;">
+        {{ match.SeriesName }}
+      </h1>
+      <div style="font-size:1.1rem; color:#475569;">
+        📍 {{ match.VenueName }}, {{ match.City }}, {{ match.Country }}
+      </div>
+    </div>
+
+    <!-- Match Actions -->
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+      <a href="{{ url_for('admin', action='result', match_id=match.MatchID) }}" class="btn btn-primary btn-sm">Record Result (U1)</a>
+      <a href="{{ url_for('admin', action='correct_result', match_id=match.MatchID) }}" class="btn btn-outline btn-sm">Correct Result (U2)</a>
+      <form action="{{ url_for('admin_delete_match', match_id=match.MatchID) }}" method="post" class="form-confirm-delete" data-confirm="Delete Match #{{ match.MatchID }}? (This will cascade delete contests and appearances)" style="display:inline;">
+        <button type="submit" class="btn btn-danger btn-sm">Delete Match (D1)</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Contesting Teams & Outcomes -->
+  <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:1.5rem; margin-bottom:1.5rem;">
+    <h3 style="font-size:1rem; text-transform:uppercase; color:#64748b; letter-spacing:0.05em; margin-bottom:1rem;">Match Result &amp; Contests</h3>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1.25rem;">
+      {% for t in teams %}
+      <div style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:1.25rem; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <span style="font-size:0.75rem; color:#64748b; font-weight:700;">{{ t.ICC_Code }}</span>
+          <h4 style="font-size:1.25rem; color:#071c36; margin-top:0.2rem;">{{ t.TeamName }}</h4>
+        </div>
+        <div>
+          {% if t.Outcome == 'Win' %}
+            <span class="badge-fmt badge-win" style="font-size:0.9rem; padding:0.35rem 0.85rem;">Winner</span>
+          {% elif t.Outcome == 'Loss' %}
+            <span class="badge-fmt badge-loss" style="font-size:0.9rem; padding:0.35rem 0.85rem;">Defeat</span>
+          {% elif t.Outcome %}
+            <span class="badge-fmt" style="font-size:0.9rem; padding:0.35rem 0.85rem; background:#f1f5f9; color:#475569;">{{ t.Outcome }}</span>
+          {% else %}
+            <span style="color:#94a3b8; font-size:0.875rem;">Result Pending</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if match.MarginValue %}
+    <div style="margin-top:1rem; font-size:0.95rem; font-weight:700; color:#c70024;">
+      Winning Margin: {{ match.MarginValue }} {{ match.MarginType }}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Match Specifications Grid -->
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:1rem; padding-top:1rem; border-top:1px solid #e2e8f0;">
+    <div>
+      <span class="stat-label">Start Date</span>
+      <div style="font-weight:700; color:#071c36;">{{ match.StartDate }}</div>
+    </div>
+    <div>
+      <span class="stat-label">End Date</span>
+      <div style="font-weight:700; color:#071c36;">{{ match.EndDate }}</div>
+    </div>
+    <div>
+      <span class="stat-label">Duration (Derived)</span>
+      <div style="font-weight:700; color:#071c36;">{{ match.DurationDays }} days</div>
+    </div>
+    <div>
+      <span class="stat-label">Playing Conditions</span>
+      <div style="font-weight:700; color:#071c36;">
+        {% if match.ScheduledDays %}
+          Scheduled for {{ match.ScheduledDays }} Days (Test)
+        {% elif match.OversPerSide %}
+          {{ match.OversPerSide }} Overs per side {% if match.DLSApplied %}(DLS Applied){% endif %}
+        {% else %}
+          Standard ICC
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Playing Squads / Line-up (PlaysIn) -->
+<div class="content-box">
+  <div class="section-header">
+    <div>
+      <h2 class="section-title">👥 Playing Squads (PlaysIn)</h2>
+      <p style="font-size:0.875rem; color:#64748b;">Confirmed team appearances and captaincy roles</p>
+    </div>
+  </div>
+
+  {% if lineup %}
+  <div class="table-responsive">
+    <table class="icc-table">
+      <thead>
+        <tr>
+          <th>Team</th>
+          <th>Player Name</th>
+          <th style="text-align:center;">Role</th>
+          <th style="text-align:center;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in lineup %}
+        <tr>
+          <td style="font-weight:700; color:#071c36;">{{ p.TeamName }}</td>
+          <td>
+            <a href="{{ url_for('player_details', player_id=p.PlayerID) }}" style="text-decoration:none; color:#071c36; font-weight:600;">
+              {{ p.FirstName }} {{ p.LastName }}
+            </a>
+          </td>
+          <td style="text-align:center;">
+            {% if p.IsCaptain %}
+              <span class="badge-fmt" style="background:#fef3c7; color:#92400e; font-weight:800;">Captain</span>
+            {% else %}
+              <span style="color:#64748b;">Player</span>
+            {% endif %}
+          </td>
+          <td style="text-align:center;">
+            <a href="{{ url_for('player_details', player_id=p.PlayerID) }}" class="btn btn-outline btn-sm">Profile &rarr;</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p style="color:#64748b; text-align:center; padding:1.5rem;">
+    No individual line-ups recorded for this match (line-up entries are optional per Phase 1 requirements).
+  </p>
+  {% endif %}
+</div>
+{% endblock %}

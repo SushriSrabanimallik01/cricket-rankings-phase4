@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}{{ player.FirstName }} {{ player.LastName }} - Profile &amp; Rating History{% endblock %}
+
+{% block content %}
+<!-- Player Header / Bio Card -->
+<div class="content-box">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1.5rem;">
+    <div>
+      <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.4rem;">
+        <span class="badge-fmt badge-{{ 'test' if player.Gender=='Men' else 'odi' }}">{{ player.Gender }}</span>
+        <span style="font-size:0.8rem; color:#64748b;">Player ID #{{ player.PlayerID }}</span>
+      </div>
+      <h1 style="font-size:2rem; font-weight:800; color:#071c36; margin-bottom:0.25rem;">
+        {{ player.FirstName }} {{ player.LastName }}
+      </h1>
+      <div style="font-size:1.1rem; color:#475569; font-weight:600; display:flex; align-items:center; gap:0.5rem;">
+        <span>Current Team:</span>
+        <strong style="color:#071c36;">{{ player.TeamName }} ({{ player.ICC_Code }})</strong>
+      </div>
+    </div>
+
+    <!-- Quick Admin Actions -->
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+      <a href="{{ url_for('admin', action='retire', player_id=player.PlayerID) }}" class="btn btn-outline btn-sm">Record Retirement (U3)</a>
+      <a href="{{ url_for('admin', action='player_move', player_id=player.PlayerID) }}" class="btn btn-outline btn-sm">Transfer Team (U5)</a>
+      <form action="{{ url_for('admin_delete_player', player_id=player.PlayerID) }}" method="post" class="form-confirm-delete" data-confirm="Delete player {{ player.FirstName }} {{ player.LastName }}? (Will be rejected if appearances exist)" style="display:inline;">
+        <button type="submit" class="btn btn-danger btn-sm">Delete Player (D2)</button>
+      </form>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:1rem; margin-top:1.5rem; padding-top:1.25rem; border-top:1px solid #e2e8f0;">
+    <div>
+      <span class="stat-label">Date of Birth</span>
+      <div style="font-size:1.05rem; font-weight:700; color:#071c36;">{{ player.DateOfBirth }}</div>
+    </div>
+    <div>
+      <span class="stat-label">Age (Derived)</span>
+      <div style="font-size:1.05rem; font-weight:700; color:#071c36;">{{ player.Age }} years</div>
+    </div>
+    <div>
+      <span class="stat-label">Retired Formats</span>
+      <div>
+        {% if player.RetiredFormat1 or player.RetiredFormat2 or player.RetiredFormat3 %}
+          {% if player.RetiredFormat1 %}<span class="badge-fmt badge-{{ player.RetiredFormat1|lower }}">{{ player.RetiredFormat1 }}</span>{% endif %}
+          {% if player.RetiredFormat2 %}<span class="badge-fmt badge-{{ player.RetiredFormat2|lower }}">{{ player.RetiredFormat2 }}</span>{% endif %}
+          {% if player.RetiredFormat3 %}<span class="badge-fmt badge-{{ player.RetiredFormat3|lower }}">{{ player.RetiredFormat3 }}</span>{% endif %}
+        {% else %}
+          <span style="color:#10b981; font-weight:600; font-size:0.9rem;">Active in all formats</span>
+        {% endif %}
+      </div>
+    </div>
+    <div>
+      <span class="stat-label">Total Match Appearances</span>
+      <div style="font-size:1.05rem; font-weight:700; color:#071c36;">{{ appearances|length }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Rating History (H3) -->
+<div class="content-box">
+  <div class="section-header">
+    <div>
+      <h2 class="section-title">📈 Official Player Rating History (H3)</h2>
+      <p style="font-size:0.875rem; color:#64748b;">Saved weekly snapshot ratings and derived ranks (oldest first)</p>
+    </div>
+  </div>
+
+  {% for fmt_name, history in [('Test', test_history), ('ODI', odi_history), ('T20I', t20i_history)] %}
+    {% if not (player.Gender == 'Women' and fmt_name == 'Test') %}
+    <div style="margin-bottom:1.75rem;">
+      <h3 style="font-size:1.05rem; color:#071c36; margin-bottom:0.6rem; display:flex; align-items:center; gap:0.5rem;">
+        <span class="badge-fmt badge-{{ fmt_name|lower }}">{{ fmt_name }}</span>
+        <span>History</span>
+      </h3>
+      {% if history %}
+      <div class="table-responsive">
+        <table class="icc-table">
+          <thead>
+            <tr>
+              <th>Snapshot Date</th>
+              <th style="text-align:right;">Batting Points</th>
+              <th style="text-align:center;">Batting Rank</th>
+              <th style="text-align:right;">Bowling Points</th>
+              <th style="text-align:center;">Bowling Rank</th>
+              <th style="text-align:right;">All-Rounder Index</th>
+              <th style="text-align:center;">All-Rounder Rank</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in history %}
+            <tr>
+              <td>{{ row.SnapshotDate }}</td>
+              <td style="text-align:right; font-weight:600; color:{% if row.BattingPoints %}#071c36{% else %}#94a3b8{% endif %};">
+                {{ row.BattingPoints if row.BattingPoints is not none else '&mdash;'|safe }}
+              </td>
+              <td style="text-align:center;">
+                {% if row.BattingRank %}<span class="rank-badge rank-default">#{{ row.BattingRank }}</span>{% else %}&mdash;{% endif %}
+              </td>
+              <td style="text-align:right; font-weight:600; color:{% if row.BowlingPoints %}#071c36{% else %}#94a3b8{% endif %};">
+                {{ row.BowlingPoints if row.BowlingPoints is not none else '&mdash;'|safe }}
+              </td>
+              <td style="text-align:center;">
+                {% if row.BowlingRank %}<span class="rank-badge rank-default">#{{ row.BowlingRank }}</span>{% else %}&mdash;{% endif %}
+              </td>
+              <td style="text-align:right; font-weight:700; color:{% if row.AllRounderIndex %}#d97706{% else %}#94a3b8{% endif %};">
+                {{ row.AllRounderIndex if row.AllRounderIndex is not none else '&mdash;'|safe }}
+              </td>
+              <td style="text-align:center;">
+                {% if row.AllRounderRank %}<span class="rank-badge rank-default">#{{ row.AllRounderRank }}</span>{% else %}&mdash;{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p style="color:#64748b; font-size:0.875rem; background:#f8fafc; padding:0.75rem 1rem; border-radius:6px; border:1px solid #e2e8f0;">
+        No {{ fmt_name }} rating snapshots recorded for this player.
+      </p>
+      {% endif %}
+    </div>
+    {% endif %}
+  {% endfor %}
+</div>
+
+<!-- Match Appearances (PlaysIn) -->
+<div class="content-box">
+  <div class="section-header">
+    <div>
+      <h2 class="section-title">🏟️ Match Appearances (PlaysIn)</h2>
+      <p style="font-size:0.875rem; color:#64748b;">Confirmed appearances and captaincy record in database</p>
+    </div>
+  </div>
+
+  {% if appearances %}
+  <div class="table-responsive">
+    <table class="icc-table">
+      <thead>
+        <tr>
+          <th>Match Date</th>
+          <th>Series</th>
+          <th>Format</th>
+          <th>Venue</th>
+          <th>Appeared For</th>
+          <th style="text-align:center;">Captain</th>
+          <th style="text-align:center;">Match Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for app_item in appearances %}
+        <tr>
+          <td>{{ app_item.StartDate }}</td>
+          <td><strong>{{ app_item.SeriesName }}</strong></td>
+          <td><span class="badge-fmt badge-{{ app_item.Format|lower }}">{{ app_item.Format }}</span></td>
+          <td>{{ app_item.VenueName }} ({{ app_item.City }})</td>
+          <td>
+            <span style="font-weight:600; color:#071c36;">{{ app_item.AppearedFor }}</span>
+            {% if app_item.AppearedFor != player.TeamName %}
+              <span class="badge-fmt" style="background:#fee2e2; color:#b91c1c;">Changed Allegiance (R7)</span>
+            {% endif %}
+          </td>
+          <td style="text-align:center;">
+            {% if app_item.IsCaptain %}
+              <span class="badge-fmt" style="background:#fef3c7; color:#92400e;">Captain</span>
+            {% else %}
+              <span style="color:#94a3b8;">No</span>
+            {% endif %}
+          </td>
+          <td style="text-align:center;">
+            <a href="{{ url_for('match_details', match_id=app_item.MatchID) }}" class="btn btn-outline btn-sm">View Match &rarr;</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p style="color:#64748b; text-align:center; padding:1.5rem;">No recorded appearances for this player.</p>
+  {% endif %}
+</div>
+{% endblock %}

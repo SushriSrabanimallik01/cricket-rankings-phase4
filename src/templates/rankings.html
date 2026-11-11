@@ -1,0 +1,505 @@
+{% extends "base.html" %}
+
+{% block title %}ICC Rankings Hub{% endblock %}
+
+{% block content %}
+<div class="content-box">
+  <div class="section-header">
+    <div>
+      <h1 class="section-title">ICC Official Rankings</h1>
+      <p style="font-size:0.875rem; color:#64748b;">Live and historical rating tables for teams and players</p>
+    </div>
+  </div>
+
+  <!-- Main Tabs -->
+  <div class="tab-nav">
+    <a href="{{ url_for('rankings', tab='teams', format=format, gender=gender) }}" class="tab-link {{ 'active' if tab == 'teams' else '' }}">Team Rankings (P1 / H2)</a>
+    <a href="{{ url_for('rankings', tab='players', format=format, gender=gender, list_type=list_type) }}" class="tab-link {{ 'active' if tab == 'players' else '' }}">Player Rankings (P1 / H4)</a>
+    <a href="{{ url_for('rankings', tab='history', format=format, gender=gender, team=team_code) }}" class="tab-link {{ 'active' if tab == 'history' else '' }}">Rating History &amp; Movements (H1 / H5 / H6 / R3)</a>
+    <a href="{{ url_for('rankings', tab='analyst') }}" class="tab-link {{ 'active' if tab == 'analyst' else '' }}">Analyst Reports (R1 / R4 / R5)</a>
+  </div>
+
+  <!-- TAB 1: TEAM RANKINGS -->
+  {% if tab == 'teams' %}
+  <!-- Filter Controls -->
+  <form method="get" action="{{ url_for('rankings') }}" class="filter-bar">
+    <input type="hidden" name="tab" value="teams">
+    
+    <!-- Gender Filter -->
+    <div class="filter-group">
+      {% for g in GENDERS %}
+      <a href="{{ url_for('rankings', tab='teams', format='ODI' if g=='Women' and format=='Test' else format, gender=g, on_date=on_date) }}"
+         class="filter-btn {{ 'active' if gender == g else '' }}">{{ g }}</a>
+      {% endfor %}
+    </div>
+
+    <!-- Format Filter -->
+    <div class="filter-group">
+      {% for f in FORMATS %}
+        {% if not (gender == 'Women' and f == 'Test') %}
+        <a href="{{ url_for('rankings', tab='teams', format=f, gender=gender, on_date=on_date) }}"
+           class="filter-btn {{ 'active' if format == f else '' }}">{{ f }}</a>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <!-- H2: Past Date Filter -->
+    <div style="display:flex; align-items:center; gap:0.5rem; margin-left:auto;">
+      <label for="on_date" style="font-size:0.825rem; font-weight:600; color:#475569;">Snapshot on or before (H2):</label>
+      <input type="date" id="on_date" name="on_date" value="{{ on_date or '' }}" class="form-control" style="width:auto; padding:0.35rem 0.65rem;">
+      <input type="hidden" name="format" value="{{ format }}">
+      <input type="hidden" name="gender" value="{{ gender }}">
+      <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+      {% if on_date %}
+        <a href="{{ url_for('rankings', tab='teams', format=format, gender=gender) }}" class="btn btn-secondary btn-sm">Reset</a>
+      {% endif %}
+    </div>
+  </form>
+
+  <!-- League Average Banner (A2) -->
+  {% if avg_rating %}
+  <div style="background:#e0f2fe; border:1px solid #bae6fd; border-radius:8px; padding:0.75rem 1.25rem; margin-bottom:1.25rem; display:flex; justify-content:space-between; align-items:center;">
+    <div style="font-size:0.9rem; color:#0369a1;">
+      <strong>League Average (A2):</strong> The average rating in the latest {{ gender }}'s {{ format }} table is 
+      <strong style="font-size:1.1rem; color:#0c4a6e;">{{ avg_rating.AverageRating }}</strong> across {{ avg_rating.Teams }} teams.
+    </div>
+    <span style="font-size:0.8rem; color:#0284c7;">Effective: {{ avg_rating.EffectiveDate }}</span>
+  </div>
+  {% endif %}
+
+  <!-- Team Rankings Table -->
+  <div class="table-responsive">
+    <table class="icc-table">
+      <thead>
+        <tr>
+          <th style="width:70px; text-align:center;">Pos</th>
+          <th>Team</th>
+          <th style="text-align:right;">Matches</th>
+          <th style="text-align:right;">Points</th>
+          <th style="text-align:right;">Rating</th>
+          <th style="text-align:center;">History</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in team_data %}
+        <tr>
+          <td style="text-align:center;">
+            <span class="rank-badge {% if row.RankPos == 1 %}rank-1{% elif row.RankPos == 2 %}rank-2{% elif row.RankPos == 3 %}rank-3{% else %}rank-default{% endif %}">
+              {{ row.RankPos }}
+            </span>
+          </td>
+          <td>
+            <div style="display:flex; align-items:center; gap:0.6rem;">
+              <span style="font-weight:700; color:#071c36; font-size:1rem;">{{ row.TeamName }}</span>
+              <span style="font-size:0.75rem; color:#64748b; background:#f1f5f9; padding:0.15rem 0.4rem; border-radius:4px;">{{ row.ICC_Code }}</span>
+            </div>
+          </td>
+          <td style="text-align:right; font-variant-numeric:tabular-nums;">{{ row.Matches }}</td>
+          <td style="text-align:right; font-variant-numeric:tabular-nums;">{{ row.Points }}</td>
+          <td style="text-align:right; font-variant-numeric:tabular-nums; font-weight:800; font-size:1.1rem; color:#071c36;">
+            {{ row.Rating }}
+          </td>
+          <td style="text-align:center;">
+            <a href="{{ url_for('rankings', tab='history', format=format, gender=gender, team=row.ICC_Code) }}" class="btn btn-outline btn-sm">History</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" style="text-align:center; padding:2rem; color:#64748b;">
+            No team rankings found for {{ gender }}'s {{ format }}{% if on_date %} on or before {{ on_date }}{% endif %}.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- TAB 2: PLAYER RANKINGS -->
+  {% if tab == 'players' %}
+  <!-- Filter Controls -->
+  <form method="get" action="{{ url_for('rankings') }}" class="filter-bar">
+    <input type="hidden" name="tab" value="players">
+
+    <!-- Gender Filter -->
+    <div class="filter-group">
+      {% for g in GENDERS %}
+      <a href="{{ url_for('rankings', tab='players', format='ODI' if g=='Women' and format=='Test' else format, gender=g, list_type=list_type, on_date=on_date) }}"
+         class="filter-btn {{ 'active' if gender == g else '' }}">{{ g }}</a>
+      {% endfor %}
+    </div>
+
+    <!-- Format Filter -->
+    <div class="filter-group">
+      {% for f in FORMATS %}
+        {% if not (gender == 'Women' and f == 'Test') %}
+        <a href="{{ url_for('rankings', tab='players', format=f, gender=gender, list_type=list_type, on_date=on_date) }}"
+           class="filter-btn {{ 'active' if format == f else '' }}">{{ f }}</a>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <!-- Category (Batting, Bowling, All-Rounder) -->
+    <div class="filter-group">
+      {% for key in ['batting', 'bowling', 'allrounder'] %}
+      <a href="{{ url_for('rankings', tab='players', format=format, gender=gender, list_type=key, on_date=on_date) }}"
+         class="filter-btn {{ 'active' if list_type == key else '' }}">
+        {{ key|capitalize }}
+      </a>
+      {% endfor %}
+    </div>
+
+    <!-- H4: Past Date Filter -->
+    <div style="display:flex; align-items:center; gap:0.5rem; margin-left:auto;">
+      <label for="on_date_p" style="font-size:0.825rem; font-weight:600; color:#475569;">Past snapshot (H4):</label>
+      <input type="date" id="on_date_p" name="on_date" value="{{ on_date or '' }}" class="form-control" style="width:auto; padding:0.35rem 0.65rem;">
+      <input type="hidden" name="format" value="{{ format }}">
+      <input type="hidden" name="gender" value="{{ gender }}">
+      <input type="hidden" name="list_type" value="{{ list_type }}">
+      <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+      {% if on_date %}
+        <a href="{{ url_for('rankings', tab='players', format=format, gender=gender, list_type=list_type) }}" class="btn btn-secondary btn-sm">Reset</a>
+      {% endif %}
+    </div>
+  </form>
+
+  <!-- Player Rankings Table -->
+  <div class="table-responsive">
+    <table class="icc-table">
+      <thead>
+        <tr>
+          <th style="width:70px; text-align:center;">Pos</th>
+          <th>Player</th>
+          <th>Team</th>
+          <th style="text-align:right;">
+            {% if list_type == 'allrounder' %}All-Rounder Index{% else %}Rating Points{% endif %}
+          </th>
+          <th style="text-align:center;">Snapshot Date</th>
+          <th style="text-align:center;">Profile</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in player_data %}
+        <tr>
+          <td style="text-align:center;">
+            <span class="rank-badge {% if row.RankPos == 1 %}rank-1{% elif row.RankPos == 2 %}rank-2{% elif row.RankPos == 3 %}rank-3{% else %}rank-default{% endif %}">
+              {{ row.RankPos }}
+            </span>
+          </td>
+          <td>
+            <a href="{{ url_for('player_details', player_id=row.PlayerID) }}" style="text-decoration:none; color:#071c36; font-weight:700;">
+              {{ row.FirstName }} {{ row.LastName }}
+            </a>
+          </td>
+          <td>
+            <span style="font-weight:600; color:#475569;">{{ row.TeamName }}</span>
+          </td>
+          <td style="text-align:right; font-variant-numeric:tabular-nums; font-weight:800; font-size:1.1rem; color:#c70024;">
+            {{ row.Points }}
+          </td>
+          <td style="text-align:center; color:#64748b; font-size:0.85rem;">{{ row.SnapshotDate }}</td>
+          <td style="text-align:center;">
+            <a href="{{ url_for('player_details', player_id=row.PlayerID) }}" class="btn btn-outline btn-sm">View Profile</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" style="text-align:center; padding:2rem; color:#64748b;">
+            No player rankings found for {{ gender }}'s {{ format }} {{ list_type }}{% if on_date %} on or before {{ on_date }}{% endif %}.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- TAB 3: RATING HISTORY & MOVEMENTS -->
+  {% if tab == 'history' %}
+  <!-- Sub-Section: Team Rating History (H1) & Position Changes (H5) -->
+  <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:1.5rem; margin-bottom:2rem;">
+    <h3 style="font-size:1.15rem; color:#071c36; margin-bottom:1rem;">📈 Team Rating History (H1) &amp; Position Changes (H5)</h3>
+    
+    <form method="get" action="{{ url_for('rankings') }}" style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center; margin-bottom:1.25rem;">
+      <input type="hidden" name="tab" value="history">
+      <select name="team" class="form-select" style="width:auto;">
+        {% for t in all_teams %}
+        <option value="{{ t.ICC_Code }}" {{ 'selected' if team_code == t.ICC_Code else '' }}>{{ t.TeamName }} ({{ t.ICC_Code }})</option>
+        {% endfor %}
+      </select>
+      <select name="format" class="form-select" style="width:auto;">
+        {% for f in FORMATS %}
+        <option value="{{ f }}" {{ 'selected' if format == f else '' }}>{{ f }}</option>
+        {% endfor %}
+      </select>
+      <select name="gender" class="form-select" style="width:auto;">
+        {% for g in GENDERS %}
+        <option value="{{ g }}" {{ 'selected' if gender == g else '' }}>{{ g }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-primary btn-sm">Load History</button>
+    </form>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(350px, 1fr)); gap:1.5rem;">
+      <!-- H1 Table -->
+      <div>
+        <h4 style="font-size:0.95rem; color:#334155; margin-bottom:0.5rem;">All Saved Snapshots (H1 - Oldest First)</h4>
+        <div class="table-responsive">
+          <table class="icc-table">
+            <thead>
+              <tr>
+                <th>Effective Date</th>
+                <th style="text-align:right;">Matches</th>
+                <th style="text-align:right;">Points</th>
+                <th style="text-align:right;">Rating</th>
+                <th style="text-align:center;">Pos</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for h in team_history %}
+              <tr>
+                <td>{{ h.EffectiveDate }}</td>
+                <td style="text-align:right;">{{ h.Matches }}</td>
+                <td style="text-align:right;">{{ h.Points }}</td>
+                <td style="text-align:right; font-weight:700;">{{ h.Rating }}</td>
+                <td style="text-align:center;"><span class="rank-badge rank-default">{{ h.RankPos }}</span></td>
+              </tr>
+              {% else %}
+              <tr><td colspan="5" style="text-align:center; color:#64748b;">No history records found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- H5 Table -->
+      <div>
+        <h4 style="font-size:0.95rem; color:#334155; margin-bottom:0.5rem;">Dates When Position Changed (H5)</h4>
+        <div class="table-responsive">
+          <table class="icc-table">
+            <thead>
+              <tr>
+                <th>Effective Date</th>
+                <th style="text-align:center;">Previous Pos</th>
+                <th style="text-align:center;">New Pos</th>
+                <th style="text-align:right;">Rating</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in pos_changes %}
+              <tr>
+                <td>{{ c.EffectiveDate }}</td>
+                <td style="text-align:center;"><span class="rank-badge rank-default">#{{ c.PrevPos }}</span></td>
+                <td style="text-align:center;">
+                  <span class="rank-badge {% if c.RankPos < c.PrevPos %}rank-1{% else %}rank-default{% endif %}">
+                    #{{ c.RankPos }}
+                  </span>
+                </td>
+                <td style="text-align:right; font-weight:700;">{{ c.Rating }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="4" style="text-align:center; color:#64748b;">No position shifts recorded.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sub-Section: Rating Change Between Two Dates (H6) -->
+  <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:1.5rem; margin-bottom:2rem;">
+    <h3 style="font-size:1.15rem; color:#071c36; margin-bottom:1rem;">📅 Rating Difference Between Two Dates (H6)</h3>
+    <form method="get" action="{{ url_for('rankings') }}" style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center; margin-bottom:1.25rem;">
+      <input type="hidden" name="tab" value="history">
+      <input type="hidden" name="format" value="{{ format }}">
+      <input type="hidden" name="gender" value="{{ gender }}">
+      <input type="hidden" name="team" value="{{ team_code }}">
+
+      <label style="font-size:0.85rem; font-weight:600;">Date 1:</label>
+      <input type="date" name="date1" value="{{ date1 or '2026-01-02' }}" class="form-control" style="width:auto;">
+
+      <label style="font-size:0.85rem; font-weight:600;">Date 2:</label>
+      <input type="date" name="date2" value="{{ date2 or '2026-11-01' }}" class="form-control" style="width:auto;">
+
+      <button type="submit" class="btn btn-primary btn-sm">Compare Dates</button>
+    </form>
+
+    {% if rating_diffs %}
+    <div class="table-responsive">
+      <table class="icc-table">
+        <thead>
+          <tr>
+            <th>Team</th>
+            <th>Start Snapshot</th>
+            <th style="text-align:right;">Start Rating</th>
+            <th>End Snapshot</th>
+            <th style="text-align:right;">End Rating</th>
+            <th style="text-align:right;">Net Rise / Fall</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rating_diffs %}
+          <tr>
+            <td><strong>{{ r.TeamName }}</strong></td>
+            <td>{{ r.StartSnapshot }}</td>
+            <td style="text-align:right;">{{ r.RatingStart }}</td>
+            <td>{{ r.EndSnapshot }}</td>
+            <td style="text-align:right;">{{ r.RatingEnd }}</td>
+            <td style="text-align:right; font-weight:800; color:{% if r.Difference > 0 %}#15803d{% elif r.Difference < 0 %}#b91c1c{% else %}#475569{% endif %};">
+              {% if r.Difference > 0 %}+{{ r.Difference }}{% else %}{{ r.Difference }}{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p style="color:#64748b; font-size:0.875rem;">Select two dates above to compare team rating changes.</p>
+    {% endif %}
+  </div>
+
+  <!-- Sub-Section: 1-Year Rating Movement (R3) -->
+  <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:1.5rem;">
+    <h3 style="font-size:1.15rem; color:#071c36; margin-bottom:0.5rem;">📊 1-Year Rating Movement &amp; Matches Played (R3)</h3>
+    <p style="font-size:0.825rem; color:#64748b; margin-bottom:1rem;">Comparing latest table with snapshot nearest 1 year earlier, plus matches played in between</p>
+    <div class="table-responsive">
+      <table class="icc-table">
+        <thead>
+          <tr>
+            <th>Team</th>
+            <th>Old Snapshot</th>
+            <th style="text-align:right;">Old Rating</th>
+            <th>New Snapshot</th>
+            <th style="text-align:right;">New Rating</th>
+            <th style="text-align:right;">Change</th>
+            <th style="text-align:right;">Matches Played</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in movement_data %}
+          <tr>
+            <td><strong>{{ m.TeamName }}</strong></td>
+            <td>{{ m.OldSnapshot }}</td>
+            <td style="text-align:right;">{{ m.OldRating }}</td>
+            <td>{{ m.NewSnapshot }}</td>
+            <td style="text-align:right;">{{ m.NewRating }}</td>
+            <td style="text-align:right; font-weight:800; color:{% if m.RatingChange > 0 %}#15803d{% elif m.RatingChange < 0 %}#b91c1c{% else %}#475569{% endif %};">
+              {% if m.RatingChange > 0 %}+{{ m.RatingChange }}{% else %}{{ m.RatingChange }}{% endif %}
+            </td>
+            <td style="text-align:right; font-weight:600;">{{ m.MatchesBetween }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" style="text-align:center; color:#64748b;">No movement data available for this format.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- TAB 4: ANALYST REPORTS -->
+  {% if tab == 'analyst' %}
+  <!-- Top 10 Batters (R1) -->
+  <div style="margin-bottom:2rem;">
+    <h3 style="font-size:1.15rem; color:#071c36; margin-bottom:0.5rem;">🏏 Top Ten Batters Per Format &amp; Gender (R1)</h3>
+    <p style="font-size:0.825rem; color:#64748b; margin-bottom:1rem;">The ten highest-rated batters in the latest published snapshots</p>
+    <div class="table-responsive">
+      <table class="icc-table">
+        <thead>
+          <tr>
+            <th>Format</th>
+            <th>Gender</th>
+            <th style="text-align:center;">Rank</th>
+            <th>Player</th>
+            <th>Team</th>
+            <th style="text-align:right;">Points</th>
+            <th style="text-align:center;">Snapshot</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in top_ten %}
+          <tr>
+            <td><span class="badge-fmt badge-{{ b.Format|lower }}">{{ b.Format }}</span></td>
+            <td>{{ b.Gender }}</td>
+            <td style="text-align:center;"><span class="rank-badge rank-default">#{{ b.BattingRank }}</span></td>
+            <td><strong>{{ b.Player }}</strong></td>
+            <td>{{ b.TeamName }}</td>
+            <td style="text-align:right; font-weight:800; color:#c70024;">{{ b.BattingPoints }}</td>
+            <td style="text-align:center; color:#64748b; font-size:0.85rem;">{{ b.SnapshotDate }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" style="text-align:center; color:#64748b;">No top batters recorded.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- World-Class All-Rounders (R4) -->
+  <div style="margin-bottom:2rem;">
+    <h3 style="font-size:1.15rem; color:#071c36; margin-bottom:0.5rem;">🌟 World-Class All-Rounders (R4)</h3>
+    <p style="font-size:0.825rem; color:#64748b; margin-bottom:1rem;">Players with an All-Rounder Index above 300 (Batting Points &times; Bowling Points &divide; 1000)</p>
+    <div class="table-responsive">
+      <table class="icc-table">
+        <thead>
+          <tr>
+            <th>Player</th>
+            <th>Format</th>
+            <th>Gender</th>
+            <th>Team</th>
+            <th style="text-align:right;">Batting Pts</th>
+            <th style="text-align:right;">Bowling Pts</th>
+            <th style="text-align:right;">All-Rounder Index</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in allrounders %}
+          <tr>
+            <td><strong>{{ a.Player }}</strong></td>
+            <td><span class="badge-fmt badge-{{ a.Format|lower }}">{{ a.Format }}</span></td>
+            <td>{{ a.Gender }}</td>
+            <td>{{ a.TeamName }}</td>
+            <td style="text-align:right;">{{ a.BattingPoints }}</td>
+            <td style="text-align:right;">{{ a.BowlingPoints }}</td>
+            <td style="text-align:right; font-weight:800; color:#d97706; font-size:1.05rem;">{{ a.AllRounderIndex }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" style="text-align:center; color:#64748b;">No players with index &gt; 300.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Deep Benches (R5) -->
+  <div>
+    <h3 style="font-size:1.15rem; color:#071c36; margin-bottom:0.5rem;">👥 Deep Benches (R5)</h3>
+    <p style="font-size:0.825rem; color:#64748b; margin-bottom:1rem;">Teams with more players on the latest published batting lists than the average per team</p>
+    <div class="table-responsive">
+      <table class="icc-table">
+        <thead>
+          <tr>
+            <th>Team</th>
+            <th style="text-align:right;">Batters Listed</th>
+            <th style="text-align:right;">Average Per Team</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for db in benches %}
+          <tr>
+            <td><strong>{{ db.TeamName }}</strong></td>
+            <td style="text-align:right; font-weight:800; color:#0369a1; font-size:1.05rem;">{{ db.BattersListed }}</td>
+            <td style="text-align:right;">{{ db.AveragePerTeam }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" style="text-align:center; color:#64748b;">No deep benches found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

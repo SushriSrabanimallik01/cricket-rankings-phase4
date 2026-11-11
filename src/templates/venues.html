@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Cricket Venues &amp; Grounds{% endblock %}
+
+{% block content %}
+<div class="content-box">
+  <div class="section-header">
+    <div>
+      <h1 class="section-title">International Cricket Venues</h1>
+      <p style="font-size:0.875rem; color:#64748b;">Explore match grounds worldwide, filter by country (P3), or search by city (Q3)</p>
+    </div>
+  </div>
+
+  <!-- Search & Filter Form (P3 & Q3) -->
+  <form method="get" action="{{ url_for('venues') }}" class="filter-bar" style="align-items:flex-end;">
+    <!-- Q3: City Search -->
+    <div style="flex:1; min-width:220px;">
+      <label for="venue-q" class="form-label" style="font-size:0.8rem; margin-bottom:0.25rem;">Search by City (Q3 e.g. "COL"):</label>
+      <input type="text" id="venue-q" name="q" value="{{ city_query }}" placeholder="Filter by city..." class="form-control">
+    </div>
+
+    <!-- P3: Country Filter -->
+    <div style="min-width:200px;">
+      <label for="country-select" class="form-label" style="font-size:0.8rem; margin-bottom:0.25rem;">Filter by Country (P3):</label>
+      <select id="country-select" name="country" class="form-select">
+        <option value="">-- All Countries --</option>
+        {% for c in countries %}
+        <option value="{{ c.Country }}" {{ 'selected' if selected_country == c.Country else '' }}>{{ c.Country }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <button type="submit" class="btn btn-primary">Search</button>
+      {% if city_query or selected_country %}
+        <a href="{{ url_for('venues') }}" class="btn btn-secondary">Clear</a>
+      {% endif %}
+    </div>
+  </form>
+
+  <!-- Quick Search Pills -->
+  <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1.5rem; flex-wrap:wrap;">
+    <span style="font-size:0.775rem; color:#64748b; font-weight:600;">Quick searches:</span>
+    <a href="{{ url_for('venues', q='COL') }}" class="badge-fmt" style="background:#e2e8f0; color:#334155; text-decoration:none;">"COL" (Q3 test)</a>
+    <a href="{{ url_for('venues', country='India') }}" class="badge-fmt" style="background:#e2e8f0; color:#334155; text-decoration:none;">India (P3)</a>
+    <a href="{{ url_for('venues', country='England') }}" class="badge-fmt" style="background:#e2e8f0; color:#334155; text-decoration:none;">England (P3)</a>
+    <a href="{{ url_for('venues', country='Australia') }}" class="badge-fmt" style="background:#e2e8f0; color:#334155; text-decoration:none;">Australia (P3)</a>
+  </div>
+
+  <!-- Venues Table -->
+  <div class="table-responsive">
+    <table class="icc-table">
+      <thead>
+        <tr>
+          {% if not selected_country %}
+          <th style="width:70px;">ID</th>
+          {% endif %}
+          <th>Ground / Stadium Name</th>
+          <th>City</th>
+          {% if not selected_country %}
+          <th>Country</th>
+          <th style="text-align:right;">Matches Hosted</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in venues %}
+        <tr>
+          {% if not selected_country %}
+          <td style="color:#64748b; font-size:0.85rem;">#{{ v.VenueID }}</td>
+          {% endif %}
+          <td>
+            <strong style="color:#071c36; font-size:1rem;">{{ v.VenueName }}</strong>
+          </td>
+          <td>
+            <span style="font-weight:600; color:#475569;">{{ v.City }}</span>
+          </td>
+          {% if not selected_country %}
+          <td>
+            <span style="background:#f1f5f9; padding:0.2rem 0.5rem; border-radius:4px; font-size:0.85rem; color:#334155;">{{ v.Country }}</span>
+          </td>
+          <td style="text-align:right; font-weight:800; color:#0369a1; font-size:1.05rem;">
+            {{ v.MatchesHosted }}
+          </td>
+          {% endif %}
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" style="text-align:center; padding:2rem; color:#64748b;">
+            No venues found matching the search criteria.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard &amp; Overview{% endblock %}
+
+{% block content %}
+<!-- Hero Banner -->
+<div class="hero-banner">
+  <div style="position: relative; z-index: 1;">
+    <h1 class="hero-title">Official ICC Cricket Rankings</h1>
+    <p class="hero-subtitle">
+      Explore historical and current ICC rankings for international teams and players across Test, ODI, and T20I formats. Driven by validated relational integrity and official rating calculations.
+    </p>
+    <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+      <a href="{{ url_for('rankings') }}" class="btn" style="background:#00e5ff; color:#071c36; font-weight:700;">View Rankings Tables &rarr;</a>
+      <a href="{{ url_for('matches') }}" class="btn" style="background:rgba(255,255,255,0.15); color:#fff;">Browse Fixtures &amp; Results</a>
+      <a href="{{ url_for('admin') }}" class="btn btn-danger">Admin Management Console</a>
+    </div>
+  </div>
+</div>
+
+<!-- Database Metrics Summary -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <span class="stat-label">Teams</span>
+    <span class="stat-value">{{ counts.team_count }}</span>
+    <span style="font-size:0.75rem; color:#64748b; margin-top:0.25rem;">Member Nations</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Matches</span>
+    <span class="stat-value">{{ counts.match_count }}</span>
+    <span style="font-size:0.75rem; color:#64748b; margin-top:0.25rem;">Recorded Contests</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Series</span>
+    <span class="stat-value">{{ counts.series_count }}</span>
+    <span style="font-size:0.75rem; color:#64748b; margin-top:0.25rem;">Tours &amp; Events</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Venues</span>
+    <span class="stat-value">{{ counts.venue_count }}</span>
+    <span style="font-size:0.75rem; color:#64748b; margin-top:0.25rem;">Grounds Worldwide</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Players</span>
+    <span class="stat-value">{{ counts.player_count }}</span>
+    <span style="font-size:0.75rem; color:#64748b; margin-top:0.25rem;">Ranked Athletes</span>
+  </div>
+</div>
+
+<!-- Current World Number 1s -->
+<div class="content-box">
+  <div class="section-header">
+    <div>
+      <h2 class="section-title">🏆 World Number 1 Rankings</h2>
+      <p style="font-size:0.875rem; color:#64748b;">Current table leaders based on latest validated snapshots</p>
+    </div>
+    <a href="{{ url_for('rankings') }}" class="btn btn-outline btn-sm">Full Ranking Tables &rarr;</a>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+    {% for team in featured.teams %}
+    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:1.25rem; display:flex; align-items:center; gap:1rem;">
+      <div class="rank-badge rank-1">#1</div>
+      <div style="flex:1;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span class="badge-fmt badge-{{ team.Format|lower }}">{{ team.Format }}</span>
+          <span style="font-size:0.75rem; font-weight:700; color:#64748b;">{{ team.Gender }}'s</span>
+        </div>
+        <h3 style="font-size:1.25rem; font-weight:800; color:#071c36; margin:0.35rem 0 0.15rem;">{{ team.TeamName }}</h3>
+        <p style="font-size:0.825rem; color:#64748b;">Rating: <strong style="color:#0f172a; font-size:1rem;">{{ team.Rating }}</strong> ({{ team.Matches }} matches, {{ team.Points }} pts)</p>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- All-Time Peak Ratings & Recent Matches Row -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+  
+  <!-- A1: Peak Batting Points -->
+  <div class="content-box" style="margin-bottom:0;">
+    <div class="section-header">
+      <div>
+        <h3 class="section-title">⭐ All-Time Peak Batting Points (A1)</h3>
+        <p style="font-size:0.825rem; color:#64748b;">Highest individual batting points ever recorded per format</p>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="icc-table">
+        <thead>
+          <tr>
+            <th>Format</th>
+            <th>Player</th>
+            <th>Peak Points</th>
+            <th>Snapshot Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in peak_batters %}
+          <tr>
+            <td><span class="badge-fmt badge-{{ r.Format|lower }}">{{ r.Format }}</span></td>
+            <td><strong>{{ r.Player }}</strong></td>
+            <td><span style="color:#c70024; font-weight:800; font-size:1.05rem;">{{ r.PeakPoints }}</span></td>
+            <td style="color:#64748b; font-size:0.85rem;">{{ r.SnapshotDate }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" style="text-align:center; color:#64748b;">No peak data recorded.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Recent Matches Overview -->
+  <div class="content-box" style="margin-bottom:0;">
+    <div class="section-header">
+      <div>
+        <h3 class="section-title">🏏 Recent Fixtures &amp; Results</h3>
+        <p style="font-size:0.825rem; color:#64748b;">Latest international matches in database</p>
+      </div>
+      <a href="{{ url_for('matches') }}" class="btn btn-outline btn-sm">All Matches &rarr;</a>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:0.75rem;">
+      {% for m in recent_matches %}
+      <div style="padding:0.75rem 1rem; border:1px solid #e2e8f0; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:#fff;">
+        <div>
+          <div style="font-size:0.75rem; color:#64748b; margin-bottom:0.2rem;">
+            <span class="badge-fmt badge-{{ m.Format|lower }}">{{ m.Format }}</span>
+            &bull; {{ m.City }}, {{ m.Country }}
+            &bull; {{ m.StartDate }}
+          </div>
+          <div style="font-weight:700; color:#071c36; font-size:0.95rem;">
+            <a href="{{ url_for('match_details', match_id=m.MatchID) }}" style="text-decoration:none; color:inherit;">{{ m.Teams }}</a>
+          </div>
+          <div style="font-size:0.8rem; color:#c70024; font-weight:600; margin-top:0.15rem;">
+            {% if m.Winner %}
+              {{ m.Winner }} won{% if m.MarginValue %} by {{ m.MarginValue }} {{ m.MarginType }}{% endif %}
+            {% elif m.OtherResult %}
+              Match Result: {{ m.OtherResult }}
+            {% else %}
+              <span style="color:#64748b;">Fixture Scheduled</span>
+            {% endif %}
+          </div>
+        </div>
+        <div>
+          <a href="{{ url_for('match_details', match_id=m.MatchID) }}" class="btn btn-outline btn-sm">Details</a>
+        </div>
+      </div>
+      {% else %}
+      <p style="color:#64748b; text-align:center; padding:1.5rem;">No recent matches recorded.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Fixtures &amp; Match Results{% endblock %}
+
+{% block content %}
+<div class="content-box">
+  <div class="section-header">
+    <div>
+      <h1 class="section-title">International Cricket Matches</h1>
+      <p style="font-size:0.875rem; color:#64748b;">Search and filter fixtures, results, and playing conditions</p>
+    </div>
+    <a href="{{ url_for('admin', action='match_add') }}" class="btn btn-primary btn-sm">+ Schedule New Match (I1)</a>
+  </div>
+
+  <!-- Search & Filter Form -->
+  <form method="get" action="{{ url_for('matches') }}" class="filter-bar" style="align-items:flex-end;">
+    <!-- Text Search -->
+    <div style="flex:1; min-width:200px;">
+      <label for="match-q" class="form-label" style="font-size:0.8rem; margin-bottom:0.25rem;">Search Series / City:</label>
+      <input type="text" id="match-q" name="q" value="{{ search_query }}" placeholder="Filter by event or venue..." class="form-control">
+    </div>
+
+    <!-- Format Filter -->
+    <div style="min-width:130px;">
+      <label for="fmt-select" class="form-label" style="font-size:0.8rem; margin-bottom:0.25rem;">Format:</label>
+      <select id="fmt-select" name="format" class="form-select">
+        <option value="">All Formats</option>
+        {% for f in FORMATS %}
+        <option value="{{ f }}" {{ 'selected' if format_filter == f else '' }}>{{ f }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Series Filter -->
+    <div style="min-width:200px;">
+      <label for="series-select" class="form-label" style="font-size:0.8rem; margin-bottom:0.25rem;">Series:</label>
+      <select id="series-select" name="series_id" class="form-select">
+        <option value="">All Series</option>
+        {% for s in all_series %}
+        <option value="{{ s.SeriesID }}" {{ 'selected' if series_id == (s.SeriesID|string) else '' }}>{{ s.SeriesName }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Team Filter -->
+    <div style="min-width:160px;">
+      <label for="team-select" class="form-label" style="font-size:0.8rem; margin-bottom:0.25rem;">Contesting Team:</label>
+      <select id="team-select" name="team" class="form-select">
+        <option value="">All Teams</option>
+        {% for t in all_teams %}
+        <option value="{{ t.ICC_Code }}" {{ 'selected' if team_code == t.ICC_Code else '' }}>{{ t.TeamName }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <button type="submit" class="btn btn-primary">Filter</button>
+      {% if search_query or format_filter or series_id or team_code %}
+        <a href="{{ url_for('matches') }}" class="btn btn-secondary">Reset</a>
+      {% endif %}
+    </div>
+  </form>
+
+  <!-- Matches Grid -->
+  <div class="matches-grid">
+    {% for m in matches %}
+    <div class="match-card">
+      <div>
+        <div class="match-header">
+          <span class="badge-fmt badge-{{ m.Format|lower }}">{{ m.Format }}</span>
+          <span>{{ m.StartDate }}{% if m.EndDate and m.EndDate != m.StartDate %} &ndash; {{ m.EndDate }}{% endif %}</span>
+        </div>
+
+        <div class="match-teams">
+          {{ m.Teams }}
+        </div>
+
+        <div class="match-result-line">
+          {% if m.Winner %}
+            🏆 {{ m.Winner }} won{% if m.MarginValue %} by {{ m.MarginValue }} {{ m.MarginType }}{% endif %}
+          {% elif m.OtherResult %}
+            ⚖️ Result: {{ m.OtherResult }}
+          {% else %}
+            <span style="color:#64748b;">⏳ Scheduled / In Progress</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="match-meta" style="margin-top:1rem; padding-top:0.75rem; border-top:1px solid #edf2f7;">
+        <div><strong>Series:</strong> {{ m.SeriesName }}</div>
+        <div><strong>Venue:</strong> {{ m.VenueName }}, {{ m.City }}</div>
+        <div>
+          {% if m.ScheduledDays %}
+            <strong>Condition:</strong> Scheduled for {{ m.ScheduledDays }} Days
+          {% elif m.OversPerSide %}
+            <strong>Condition:</strong> {{ m.OversPerSide }} Overs per side {% if m.DLSApplied %}(DLS Applied){% endif %}
+          {% endif %}
+        </div>
+        <div style="margin-top:0.75rem; display:flex; justify-content:space-between; align-items:center;">
+          <a href="{{ url_for('match_details', match_id=m.MatchID) }}" class="btn btn-outline btn-sm">Match Details &amp; Squads &rarr;</a>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div style="grid-column: 1 / -1; text-align:center; padding:3rem 1rem; color:#64748b; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0;">
+      <h3>No matches found</h3>
+      <p style="margin-top:0.5rem;">Try adjusting your filters or search term above.</p>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}

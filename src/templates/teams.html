@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}ICC Member Teams{% endblock %}
+
+{% block content %}
+<div class="content-box">
+  <div class="section-header">
+    <div>
+      <h1 class="section-title">ICC Cricket Member Teams</h1>
+      <p style="font-size:0.875rem; color:#64748b;">Member nations, format eligibility, and squad profiles (S1 / A4)</p>
+    </div>
+    <a href="{{ url_for('admin', action='team_formats') }}" class="btn btn-outline btn-sm">Manage Formats &rarr;</a>
+  </div>
+
+  <!-- Format Eligibility Filter (S1) -->
+  <div class="filter-bar">
+    <span style="font-size:0.85rem; font-weight:600; color:#475569;">Filter by Format Eligibility (S1):</span>
+    <div class="filter-group">
+      <a href="{{ url_for('teams') }}" class="filter-btn {{ 'active' if not format_filter else '' }}">All Teams</a>
+      {% for f in FORMATS %}
+      <a href="{{ url_for('teams', format=f) }}" class="filter-btn {{ 'active' if format_filter == f else '' }}">{{ f }} Eligible</a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Teams Grid / Table -->
+  <div class="table-responsive">
+    <table class="icc-table">
+      <thead>
+        <tr>
+          <th style="width:90px;">ICC Code</th>
+          <th>National Team</th>
+          <th>Eligible Formats</th>
+          <th style="text-align:right;">Squad Size</th>
+          <th style="text-align:right;">Youngest Age</th>
+          <th style="text-align:right;">Oldest Age</th>
+          <th style="text-align:center;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in teams %}
+        {% set prof = profile_map.get(t.ICC_Code) %}
+        <tr>
+          <td>
+            <span style="font-weight:800; font-size:1.05rem; color:#071c36; background:#f1f5f9; padding:0.25rem 0.6rem; border-radius:6px;">
+              {{ t.ICC_Code }}
+            </span>
+          </td>
+          <td>
+            <span style="font-weight:700; font-size:1.05rem; color:#071c36;">{{ t.TeamName }}</span>
+          </td>
+          <td>
+            <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+              {% if t.EligibleFormat1 %}
+                <span class="badge-fmt badge-{{ t.EligibleFormat1|lower }}">{{ t.EligibleFormat1 }}</span>
+              {% endif %}
+              {% if t.EligibleFormat2 %}
+                <span class="badge-fmt badge-{{ t.EligibleFormat2|lower }}">{{ t.EligibleFormat2 }}</span>
+              {% endif %}
+              {% if t.EligibleFormat3 %}
+                <span class="badge-fmt badge-{{ t.EligibleFormat3|lower }}">{{ t.EligibleFormat3 }}</span>
+              {% endif %}
+            </div>
+          </td>
+          <td style="text-align:right; font-weight:700; font-size:1.05rem; color:#0369a1;">
+            {{ t.SquadSize }}
+          </td>
+          <td style="text-align:right; color:#475569;">
+            {% if prof and prof.YoungestAge %}{{ prof.YoungestAge }} yrs{% else %}&mdash;{% endif %}
+          </td>
+          <td style="text-align:right; color:#475569;">
+            {% if prof and prof.OldestAge %}{{ prof.OldestAge }} yrs{% else %}&mdash;{% endif %}
+          </td>
+          <td style="text-align:center;">
+            <div style="display:inline-flex; gap:0.4rem;">
+              <a href="{{ url_for('players', team=t.ICC_Code) }}" class="btn btn-outline btn-sm">Squad &rarr;</a>
+              <a href="{{ url_for('rankings', tab='history', team=t.ICC_Code) }}" class="btn btn-outline btn-sm">Ratings</a>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" style="text-align:center; padding:2rem; color:#64748b;">
+            No teams found matching the eligibility criteria.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

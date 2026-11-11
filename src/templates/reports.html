@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}ICC Statistical &amp; Analysis Reports{% endblock %}
+
+{% block content %}
+<div class="content-box">
+  <div class="section-header">
+    <div>
+      <h1 class="section-title">Statistical &amp; Analysis Reports</h1>
+      <p style="font-size:0.875rem; color:#64748b;">Multi-entity relational analysis reports (R2 / R7 / R4 / R5)</p>
+    </div>
+  </div>
+
+  <!-- Report R2: Results against Rating -->
+  <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:1.5rem; margin-bottom:2rem;">
+    <h3 style="font-size:1.15rem; color:#071c36; margin-bottom:0.35rem;">🏆 Team Results Against Rating (R2)</h3>
+    <p style="font-size:0.825rem; color:#64748b; margin-bottom:1.25rem;">
+      Each team's wins, losses, ties, draws, and no-results in a date range, shown alongside its latest rating and table position
+    </p>
+
+    <form method="get" action="{{ url_for('reports') }}" class="filter-bar" style="align-items:flex-end; margin-bottom:1.25rem;">
+      <div>
+        <label class="form-label" style="font-size:0.8rem; margin-bottom:0.25rem;">Format:</label>
+        <select name="format" class="form-select">
+          {% for f in FORMATS %}
+          <option value="{{ f }}" {{ 'selected' if format == f else '' }}>{{ f }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="form-label" style="font-size:0.8rem; margin-bottom:0.25rem;">From Date:</label>
+        <input type="date" name="start_date" value="{{ start_date }}" class="form-control">
+      </div>
+
+      <div>
+        <label class="form-label" style="font-size:0.8rem; margin-bottom:0.25rem;">To Date:</label>
+        <input type="date" name="end_date" value="{{ end_date }}" class="form-control">
+      </div>
+
+      <div>
+        <button type="submit" class="btn btn-primary">Run Report (R2)</button>
+      </div>
+    </form>
+
+    <div class="table-responsive">
+      <table class="icc-table">
+        <thead>
+          <tr>
+            <th>Team</th>
+            <th>Gender</th>
+            <th style="text-align:right;">Played</th>
+            <th style="text-align:right;">Wins</th>
+            <th style="text-align:right;">Losses</th>
+            <th style="text-align:right;">Ties</th>
+            <th style="text-align:right;">Draws</th>
+            <th style="text-align:right;">No Result</th>
+            <th style="text-align:right;">Latest Rating</th>
+            <th style="text-align:center;">Latest Pos</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in results_rating %}
+          <tr>
+            <td><strong style="color:#071c36; font-size:1rem;">{{ r.TeamName }}</strong></td>
+            <td>{{ r.Gender }}</td>
+            <td style="text-align:right; font-weight:600;">{{ r.Matches }}</td>
+            <td style="text-align:right; font-weight:800; color:#15803d;">{{ r.Wins }}</td>
+            <td style="text-align:right; color:#b91c1c;">{{ r.Losses }}</td>
+            <td style="text-align:right;">{{ r.Ties }}</td>
+            <td style="text-align:right;">{{ r.Draws }}</td>
+            <td style="text-align:right;">{{ r.NoResults }}</td>
+            <td style="text-align:right; font-weight:800; color:#071c36; font-size:1.05rem;">{{ r.LatestRating or '&mdash;'|safe }}</td>
+            <td style="text-align:center;">
+              {% if r.LatestPosition %}
+                <span class="rank-badge rank-default">#{{ r.LatestPosition }}</span>
+              {% else %}&mdash;{% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="10" style="text-align:center; padding:1.5rem; color:#64748b;">No matches found in this period.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Report R7: Changed Allegiance -->
+  <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:1.5rem; margin-bottom:2rem;">
+    <h3 style="font-size:1.15rem; color:#071c36; margin-bottom:0.35rem;">🔄 Changed Allegiance (R7)</h3>
+    <p style="font-size:0.825rem; color:#64748b; margin-bottom:1.25rem;">
+      Cricketers who have represented a country in a past match different from the country they currently represent (joins Player, PlaysIn, and Team twice)
+    </p>
+
+    <div class="table-responsive">
+      <table class="icc-table">
+        <thead>
+          <tr>
+            <th>Player Name</th>
+            <th>Currently Represents</th>
+            <th>Appeared In Match For</th>
+            <th style="text-align:right;">Historical Appearances</th>
+            <th style="text-align:center;">Profile</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in allegiance %}
+          <tr>
+            <td><strong style="color:#071c36; font-size:1rem;">{{ a.Player }}</strong></td>
+            <td><span style="font-weight:700; color:#15803d;">{{ a.CurrentTeam }}</span></td>
+            <td><span style="font-weight:700; color:#b91c1c;">{{ a.PlayedFor }}</span></td>
+            <td style="text-align:right; font-weight:800; color:#071c36;">{{ a.Appearances }}</td>
+            <td style="text-align:center;">
+              <a href="{{ url_for('player_details', player_id=a.PlayerID) }}" class="btn btn-outline btn-sm">View Profile &rarr;</a>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" style="text-align:center; padding:1.5rem; color:#64748b;">No players with changed allegiance found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
